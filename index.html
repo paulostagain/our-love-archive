@@ -14,7 +14,6 @@
     --muted: #cdbab7;
     --line: #493a3c;
     --pink: #e6a1b4;
-    --pink-dark: #3b252c;
   }
   * { box-sizing: border-box; }
   html, body { min-height: 100%; }
@@ -43,10 +42,7 @@
     background: rgba(25, 21, 22, .94);
     box-shadow: 0 24px 80px rgba(0,0,0,.45);
   }
-  .heart {
-    font-size: clamp(32px, 10vw, 42px);
-    margin-bottom: 8px;
-  }
+  .heart { font-size: clamp(32px, 10vw, 42px); margin-bottom: 8px; }
   h1 {
     margin: 0;
     font-size: clamp(28px, 8vw, 38px);
@@ -72,7 +68,6 @@
     font-size: 20px;
     letter-spacing: 4px;
     outline: none;
-    -webkit-appearance: none;
   }
   input:focus {
     border-color: var(--pink);
@@ -90,15 +85,6 @@
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  button:active { transform: scale(.99); }
-  .message {
-    min-height: 27px;
-    margin-top: 14px;
-    color: var(--pink);
-    font-size: 17px;
-    line-height: 1.4;
   }
   .footer {
     margin-top: 25px;
@@ -106,69 +92,141 @@
     font-size: 12px;
     letter-spacing: .5px;
   }
-  .hidden { display: none; }
-  .love-message {
-    animation: fade .7s ease;
+
+  /* Popup */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(5px);
   }
-  @keyframes fade {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+  .overlay.show { display: flex; }
+  .popup {
+    width: min(100%, 340px);
+    padding: 30px 24px 24px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: #1b1718;
+    box-shadow: 0 25px 80px rgba(0,0,0,.55);
+    animation: pop .22s ease-out;
   }
-  @media (max-width: 360px) {
-    .card { border-radius: 20px; }
-    .subtitle { margin-bottom: 22px; }
+  .popup-icon { font-size: 34px; margin-bottom: 8px; }
+  .popup h2 {
+    margin: 0 0 9px;
+    font-size: 25px;
+    font-weight: 500;
+  }
+  .popup p {
+    margin: 0 0 20px;
+    color: var(--muted);
+    line-height: 1.5;
+    font-size: 15px;
+  }
+  .popup button {
+    margin: 0;
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: scale(.92); }
+    to { opacity: 1; transform: scale(1); }
   }
 </style>
 </head>
 <body>
+
 <main class="card">
   <div class="heart">♡</div>
   <h1>Our Love Archive</h1>
-
   <p class="subtitle">
     A little place for our memories.<br>
     Enter our secret PIN to continue.
   </p>
 
   <form id="form">
-    <input id="pin"
-           type="password"
-           inputmode="numeric"
-           autocomplete="off"
-           maxlength="8"
-           placeholder="••••••••"
-           aria-label="Secret PIN">
+    <input id="pin" type="password" inputmode="numeric"
+           autocomplete="off" maxlength="8"
+           placeholder="••••••••" aria-label="Secret PIN">
     <button type="submit">Open Our Memories ♡</button>
   </form>
 
-  <div id="message" class="message" aria-live="polite"></div>
-
   <div class="footer">our little secret ♡</div>
 </main>
+
+<!-- Popup -->
+<div class="overlay" id="overlay">
+  <div class="popup" role="dialog" aria-modal="true">
+    <div class="popup-icon" id="popupIcon">♡</div>
+    <h2 id="popupTitle"></h2>
+    <p id="popupText"></p>
+    <button id="popupButton">OK ♡</button>
+  </div>
+</div>
 
 <script>
   const CORRECT_PIN = "10202024";
   const GOOGLE_DRIVE_URL =
     "https://drive.google.com/drive/folders/1950DYGzSosrifjxNpmak06wTwM9ZXjZe";
 
-  document.getElementById("form").addEventListener("submit", function(event) {
+  const form = document.getElementById("form");
+  const pin = document.getElementById("pin");
+  const overlay = document.getElementById("overlay");
+  const popupIcon = document.getElementById("popupIcon");
+  const popupTitle = document.getElementById("popupTitle");
+  const popupText = document.getElementById("popupText");
+  const popupButton = document.getElementById("popupButton");
+
+  let correctPassword = false;
+
+  function showPopup(icon, title, text, isCorrect) {
+    correctPassword = isCorrect;
+    popupIcon.textContent = icon;
+    popupTitle.textContent = title;
+    popupText.textContent = text;
+    popupButton.textContent = isCorrect ? "Open Our Memories ♡" : "Try Again";
+    overlay.classList.add("show");
+  }
+
+  function closePopup() {
+    overlay.classList.remove("show");
+
+    if (correctPassword) {
+      // Same browser tab: replace the current page with Google Drive.
+      window.location.replace(GOOGLE_DRIVE_URL);
+    } else {
+      pin.value = "";
+      pin.focus();
+    }
+  }
+
+  form.addEventListener("submit", function(event) {
     event.preventDefault();
 
-    const pin = document.getElementById("pin").value;
-    const message = document.getElementById("message");
-
-    if (pin === CORRECT_PIN) {
-      message.textContent = "I love you, lovie ♡";
-      message.classList.add("love-message");
-
-      // Open the Drive folder in the same browser tab after the message appears.
-      setTimeout(function() {
-        window.location.href = GOOGLE_DRIVE_URL;
-      }, 1300);
+    if (pin.value === CORRECT_PIN) {
+      showPopup(
+        "💕",
+        "I love you, lovie",
+        "Thank you for being part of my favorite memories. ♡",
+        true
+      );
     } else {
-      message.textContent = "That's not our secret ♡";
-      document.getElementById("pin").select();
+      showPopup(
+        "🔐",
+        "Wrong password",
+        "That's not our secret ♡",
+        false
+      );
     }
+  });
+
+  popupButton.addEventListener("click", closePopup);
+
+  overlay.addEventListener("click", function(event) {
+    if (event.target === overlay) closePopup();
   });
 </script>
 </body>
